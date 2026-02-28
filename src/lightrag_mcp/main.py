@@ -26,14 +26,23 @@ def main():
 
         logger.info("Starting LightRAG MCP server")
         logger.info(
-            f"LightRAG API server is expected to be already running and available at: {config.LIGHTRAG_API_BASE_URL}"
+            "LightRAG API server is expected to be already running and available at: "
+            f"{config.LIGHTRAG.base_url}"
         )
-        if config.LIGHTRAG_API_KEY:
+        logger.info(f"MCP transport: {config.MCP_TRANSPORT}")
+        if config.MCP_TRANSPORT == "streamable-http":
+            logger.info(f"Streamable HTTP endpoint: {config.MCP_STREAMABLE_HTTP_URL}")
+            if config.MCP_STATELESS_HTTP:
+                logger.info("Streamable HTTP mode: stateless")
+            if config.MCP_JSON_RESPONSE:
+                logger.info("Streamable HTTP mode: json_response")
+
+        if config.LIGHTRAG.api_key:
             logger.info("API key is configured")
         else:
             logger.warning("No API key provided")
 
-        mcp.run(transport="stdio")
+        mcp.run(transport=config.MCP_TRANSPORT)
 
     except KeyboardInterrupt:
         logger.info("Server stopped by user")

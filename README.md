@@ -36,15 +36,26 @@ uv pip install -e .
 
 ## Usage
 
-**Important**: LightRAG MCP server should only be run as an MCP server through an MCP client configuration file (mcp-config.json).
+LightRAG MCP server supports two MCP transport modes:
+- **stdio (default)**: run through an MCP client configuration file (`mcp-config.json`)
+- **streamable-http**: run as a standalone HTTP server for remote MCP clients
 
 ### Command Line Options
 
-The following arguments are available when configuring the server in mcp-config.json:
+LightRAG API connection:
 
 - `--host`: LightRAG API host (default: localhost)
 - `--port`: LightRAG API port (default: 9621)
 - `--api-key`: LightRAG API key (optional)
+
+MCP transport:
+
+- `--mcp-transport`: MCP transport (`stdio` or `streamable-http`, default: stdio)
+- `--mcp-host`: MCP HTTP host (default: 127.0.0.1)
+- `--mcp-port`: MCP HTTP port (default: 8000)
+- `--mcp-streamable-http-path`: Streamable HTTP endpoint path (default: /mcp)
+- `--mcp-stateless-http`: Enable stateless Streamable HTTP mode (new session per request)
+- `--mcp-json-response`: Return JSON responses instead of SSE for Streamable HTTP
 
 ### Integration with LightRAG API
 
@@ -61,7 +72,7 @@ uv pip install -r LightRAG/lightrag/api/requirements.txt
 uv run LightRAG/lightrag/api/lightrag_server.py --host localhost --port 9621 --working-dir ./rag_storage --input-dir ./input --llm-binding openai --embedding-binding openai --log-level DEBUG
 ```
 
-### Setting up as MCP server
+### Setting up as MCP server (stdio)
 
 To set up LightRAG MCP as an MCP server, add the following configuration to your MCP client configuration file (e.g., `mcp-config.json`):
 
@@ -111,6 +122,23 @@ To set up LightRAG MCP as an MCP server, add the following configuration to your
 ```
 
 Replace `/path/to/lightrag_mcp` with the actual path to your lightrag-mcp directory.
+
+### Running over Streamable HTTP (standalone server)
+
+Use this when you need remote access or want to host the MCP server behind HTTP infrastructure:
+
+```bash
+uv run src/lightrag_mcp/main.py \
+  --mcp-transport streamable-http \
+  --mcp-host 0.0.0.0 \
+  --mcp-port 8000 \
+  --mcp-streamable-http-path /mcp \
+  --host localhost \
+  --port 9621 \
+  --api-key your_api_key
+```
+
+MCP clients should connect to: `http://localhost:8000/mcp`
 
 ## Available MCP Tools
 

@@ -17,8 +17,6 @@ from lightrag_mcp.lightrag_client import LightRAGClient
 
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("LightRAG MCP Server")
-
 
 def format_response(result: Any, is_error: bool = False) -> Dict[str, Any]:
     """
@@ -66,8 +64,8 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     Initializes LightRAG API client at startup and closes it at shutdown.
     """
     lightrag_client = LightRAGClient(
-        base_url=config.LIGHTRAG_API_BASE_URL,
-        api_key=config.LIGHTRAG_API_KEY,
+        base_url=config.LIGHTRAG.base_url,
+        api_key=config.LIGHTRAG.api_key,
     )
 
     try:
@@ -77,7 +75,15 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         logger.info("LightRAG MCP Server stopped")
 
 
-mcp = FastMCP("LightRAG MCP Server", lifespan=app_lifespan)
+mcp = FastMCP(
+    "LightRAG MCP Server",
+    lifespan=app_lifespan,
+    host=config.MCP_HOST,
+    port=config.MCP_PORT,
+    streamable_http_path=config.MCP_STREAMABLE_HTTP_PATH,
+    stateless_http=config.MCP_STATELESS_HTTP,
+    json_response=config.MCP_JSON_RESPONSE,
+)
 
 
 async def execute_lightrag_operation(
