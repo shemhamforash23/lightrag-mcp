@@ -86,7 +86,15 @@ class LightRAGClient:
         """
         self.base_url = base_url
         self.api_key = api_key
-        self.client = AuthenticatedClient(base_url=base_url, token=api_key, verify_ssl=False)
+        # LightRAG server expects API key via "X-API-Key" header (not "Authorization: Bearer").
+        # See: lightrag/api/utils_api.py:get_combined_auth_dependency uses APIKeyHeader(name="X-API-Key").
+        self.client = AuthenticatedClient(
+            base_url=base_url,
+            token=api_key,
+            verify_ssl=False,
+            prefix="",
+            auth_header_name="X-API-Key",
+        )
         logger.info(f"Initialized LightRAG API client: {base_url}")
 
     async def _handle_exception(self, e: Exception, operation_name: str) -> None:
