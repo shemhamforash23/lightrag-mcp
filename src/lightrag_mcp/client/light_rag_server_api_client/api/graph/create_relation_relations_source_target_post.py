@@ -33,11 +33,29 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": f"/relations/{source}/{target}",
+        "url": "/graph/relation/create",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # Same migration as create_entity: legacy `/relations/{src}/{tgt}` was
+    # replaced by `POST /graph/relation/create` in modern LightRAG. The new
+    # endpoint expects:
+    #   {"source_entity": "...", "target_entity": "...",
+    #    "relation_data": {description, keywords, weight, ...}}
+    #
+    # We forward the full body.to_dict() into `relation_data` so any
+    # additional_properties on RelationRequest are preserved (parity with
+    # the entity case). `source_id` is not part of the new schema and
+    # `weight` must not be None, so we sanitize those before sending.
+    _relation_data = body.to_dict()
+    _relation_data.pop("source_id", None)
+    if _relation_data.get("weight") is None:
+        _relation_data["weight"] = 1.0
+    _body = {
+        "source_entity": source,
+        "target_entity": target,
+        "relation_data": _relation_data,
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"

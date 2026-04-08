@@ -26,10 +26,15 @@ def _get_kwargs(
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
+    # Modern LightRAG (>=1.4.x) replaced `DELETE /entities/{name}` with
+    # `DELETE /documents/delete_entity` whose body is `{"entity_name": ...}`.
+    import json as _json
     _kwargs: dict[str, Any] = {
         "method": "delete",
-        "url": f"/entities/{entity_name}",
+        "url": "/documents/delete_entity",
         "params": params,
+        "headers": {"Content-Type": "application/json"},
+        "content": _json.dumps({"entity_name": entity_name}).encode("utf-8"),
     }
 
     return _kwargs

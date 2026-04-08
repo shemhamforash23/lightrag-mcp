@@ -31,11 +31,21 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": "/merge",
+        "url": "/graph/entities/merge",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # Modern LightRAG (>=1.4.x) replaced `POST /merge` with
+    # `POST /graph/entities/merge`. The new schema also renamed the
+    # request fields:
+    #   source_entities  -> entities_to_change
+    #   target_entity    -> entity_to_change_into
+    # `merge_strategy` is no longer accepted server-side and is dropped.
+    _src = body.to_dict()
+    _body = {
+        "entities_to_change": _src.get("source_entities", []),
+        "entity_to_change_into": _src.get("target_entity", ""),
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"
