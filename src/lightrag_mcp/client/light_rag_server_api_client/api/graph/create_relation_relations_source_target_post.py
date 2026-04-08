@@ -33,11 +33,30 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": f"/relations/{source}/{target}",
+        "url": "/graph/relation/create",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # Same migration as create_entity: legacy `/relations/{src}/{tgt}` was
+    # replaced by `POST /graph/relation/create` in modern LightRAG. The new
+    # endpoint expects:
+    #   {"source_entity": "...", "target_entity": "...",
+    #    "relation_data": {description, keywords, weight}}
+    _rel_dict = body.to_dict()
+    _relation_data = {
+        "description": _rel_dict.get("description", ""),
+        "keywords": _rel_dict.get("keywords", ""),
+        "weight": (
+            _rel_dict.get("weight", 1.0)
+            if _rel_dict.get("weight") is not None
+            else 1.0
+        ),
+    }
+    _body = {
+        "source_entity": source,
+        "target_entity": target,
+        "relation_data": _relation_data,
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"

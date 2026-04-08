@@ -32,11 +32,25 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": f"/entities/{entity_name}",
+        "url": "/graph/entity/create",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # The legacy `/entities/{name}` endpoint was removed/renamed in modern
+    # LightRAG (>=1.4.x). The new `POST /graph/entity/create` writes the
+    # entity into BOTH the AGE graph storage and the vector DB, while the
+    # old endpoint only updated the vector DB (and now returns 404).
+    #
+    # The new endpoint expects a wrapped body:
+    #   {"entity_name": "...", "entity_data": {entity_type, description, ...}}
+    # whereas EntityRequest produces a flat dict. We rewrap here to keep
+    # the public sync/async API stable.
+    _entity_data = body.to_dict()
+    _entity_data.pop("source_id", None)  # not part of EntityCreateRequest
+    _body = {
+        "entity_name": entity_name,
+        "entity_data": _entity_data,
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"
