@@ -31,12 +31,20 @@ def _get_kwargs(
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
-        "method": "put",
-        "url": f"/entities/{entity_name}",
+        "method": "post",
+        "url": "/graph/entity/edit",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # Modern LightRAG (>=1.4.x) replaced `PUT /entities/{name}` with
+    # `POST /graph/entity/edit`. The new schema wraps the changeset:
+    #   {"entity_name": "...", "updated_data": {...}, "allow_rename": ...}
+    _updated_data = body.to_dict()
+    _updated_data.pop("source_id", None)
+    _body = {
+        "entity_name": entity_name,
+        "updated_data": _updated_data,
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"

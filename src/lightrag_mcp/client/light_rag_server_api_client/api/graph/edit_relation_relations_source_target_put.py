@@ -23,7 +23,11 @@ def _get_kwargs(
 
     params: dict[str, Any] = {}
 
-    params["relation_type"] = relation_type
+    # `relation_type` used to be a query parameter for the legacy
+    # `PUT /relations/{src}/{tgt}` endpoint. The replacement endpoint
+    # `POST /graph/relation/edit` does not accept it as a query, so we
+    # do NOT add it to params here. It is folded into `updated_data`
+    # below to keep callers that still pass it from silently losing it.
 
     json_api_key_header_value: Union[None, Unset, str]
     if isinstance(api_key_header_value, Unset):
@@ -35,12 +39,25 @@ def _get_kwargs(
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
-        "method": "put",
-        "url": f"/relations/{source}/{target}",
+        "method": "post",
+        "url": "/graph/relation/edit",
         "params": params,
     }
 
-    _body = body.to_dict()
+    # Modern LightRAG (>=1.4.x) replaced `PUT /relations/{src}/{tgt}` with
+    # `POST /graph/relation/edit`. The new schema is:
+    #   {"source_id": "...", "target_id": "...", "updated_data": {...}}
+    # `relation_type` is no longer a query parameter — if a caller still
+    # passes it, we move it into updated_data so it survives the migration.
+    _updated_data = body.to_dict()
+    _updated_data.pop("source_id", None)
+    if relation_type is not None and relation_type is not UNSET:
+        _updated_data.setdefault("relation_type", relation_type)
+    _body = {
+        "source_id": source,
+        "target_id": target,
+        "updated_data": _updated_data,
+    }
 
     _kwargs["json"] = _body
     headers["Content-Type"] = "application/json"
