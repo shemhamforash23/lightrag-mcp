@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 9621
+DEFAULT_SSL_PORT = 443
 DEFAULT_API_KEY = ""
 
 DEFAULT_MCP_TRANSPORT = "stdio"
@@ -22,10 +23,15 @@ class LightRAGSettings:
     host: str
     port: int
     api_key: str
+    ssl: bool = False
 
     @property
     def base_url(self) -> str:
-        return f"http://{self.host}:{self.port}"
+        scheme = "https" if self.ssl else "http"
+        # Omit the port when it is the scheme's default (https -> 443, http -> 80).
+        default_port = 443 if self.ssl else 80
+        port_suffix = "" if self.port == default_port else f":{self.port}"
+        return f"{scheme}://{self.host}{port_suffix}"
 
 
 @dataclass(frozen=True)
@@ -61,10 +67,18 @@ def parse_args():
     parser.add_argument(
         "--port",
         type=int,
-        default=DEFAULT_PORT,
-        help=f"LightRAG API port (default: {DEFAULT_PORT})",
+        default=None,
+        help=(
+            "LightRAG API port "
+            f"(default: {DEFAULT_PORT}, or {DEFAULT_SSL_PORT} when --ssl is set)"
+        ),
     )
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help="LightRAG API key (optional)")
+    parser.add_argument(
+        "--ssl",
+        action="store_true",
+        help="Use HTTPS instead of HTTP (default: False)",
+    )
     parser.add_argument(
         "--mcp-transport",
         choices=["stdio", "streamable-http"],
@@ -105,10 +119,18 @@ def parse_args():
 
 args = parse_args()
 
+# Resolve the API port: an explicit --port always wins, otherwise pick the
+# default for the scheme (443 for HTTPS, 9621 for plain HTTP).
+if args.port is not None:
+    _lightrag_port = args.port
+else:
+    _lightrag_port = DEFAULT_SSL_PORT if args.ssl else DEFAULT_PORT
+
 LIGHTRAG = LightRAGSettings(
     host=args.host,
-    port=args.port,
+    port=_lightrag_port,
     api_key=args.api_key,
+    ssl=args.ssl,
 )
 MCP = MCPSettings(
     transport=args.mcp_transport,
@@ -122,6 +144,7 @@ MCP = MCPSettings(
 LIGHTRAG_API_HOST = LIGHTRAG.host
 LIGHTRAG_API_PORT = LIGHTRAG.port
 LIGHTRAG_API_KEY = LIGHTRAG.api_key
+LIGHTRAG_API_SSL = LIGHTRAG.ssl
 LIGHTRAG_API_BASE_URL = LIGHTRAG.base_url
 
 MCP_TRANSPORT = MCP.transport
